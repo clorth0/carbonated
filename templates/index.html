@@ -6,19 +6,22 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>xAI Prompt Tester</h1>
-    <form method="POST" action="/submit/">
-        <label for="prompt">Enter your prompt:</label><br>
-        <textarea id="prompt" name="prompt" rows="4" cols="50" placeholder="Type your prompt here..."></textarea><br>
-        <button type="submit">Submit</button>
-    </form>
-    <h2>Output:</h2>
-    <div>
-        {% if result %}
-            <p>{{ result }}</p>
-        {% else %}
-            <p>No output yet. Submit a prompt!</p>
-        {% endif %}
+    <div class="container">
+        <h1>xAI Prompt Tester</h1>
+        <form method="POST" action="/">
+            <label for="prompt">Enter your prompt:</label><br>
+            <textarea id="prompt" name="prompt" rows="4" cols="50" placeholder="Type your prompt here...">{{ prompt | default('') }}</textarea><br>
+            <button type="submit">Submit</button>
+        </form>
+
+        <h2>Output:</h2>
+        <div class="output">
+            {% if result %}
+                <div class="rendered-output">{{ result | safe }}</div>
+            {% else %}
+                <p>No output yet. Submit a prompt!</p>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>
