@@ -37,6 +37,7 @@ pip install -r requirements.txt
 4. Create a .env file in the project root with the following contents:
 
 XAI_API_KEY=your_xai_api_key
+
 OPENAI_API_KEY=your_openai_api_key
 
 5. Run the Application
