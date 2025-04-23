@@ -1,4 +1,4 @@
-# xAI Prompt Tester
+# Carbonated - xAI Prompt Tester
 
 A lightweight FastAPI web app that lets you test prompts against xAI's Grok model. Prompts are submitted through a web interface, sent to the xAI API, and responses are returned as rendered, sanitized markdown.
 
