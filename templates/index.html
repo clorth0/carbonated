@@ -10,9 +10,23 @@
         <h1>xAI Prompt Tester</h1>
         <form method="POST" action="/">
             <label for="prompt">Enter your prompt:</label><br>
-            <textarea id="prompt" name="prompt" rows="4" cols="50" placeholder="Type your prompt here...">{{ prompt | default('') }}</textarea><br>
+            <textarea id="prompt" name="prompt" rows="4" cols="50" placeholder="Type your prompt here...">{{ prompt | default('') }}</textarea><br><br>
+
+            <label for="model">Select a model:</label><br>
+            <select id="model" name="model">
+                {% for m in available_models %}
+                    <option value="{{ m.name }}" {% if m.name == model %}selected{% endif %}>
+                        {{ m.name }} ({{ m.provider }})
+                    </option>
+                {% endfor %}
+            </select><br><br>
+
             <button type="submit">Submit</button>
         </form>
+
+        <p style="font-size: 0.9em; color: gray;">
+            💡 Model currently in use: <strong>{{ model }}</strong>
+        </p>
 
         <h2>Output:</h2>
         <div class="output">
