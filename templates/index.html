@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>xAI Prompt Tester</title>
+    <title>Reddit Insight Analyzer</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>xAI Prompt Tester</h1>
+        <h1>Reddit Insight Analyzer</h1>
+
         <form method="POST" action="/">
-            <label for="prompt">Enter your prompt:</label><br>
-            <textarea id="prompt" name="prompt" rows="4" cols="50" placeholder="Type your prompt here...">{{ prompt | default('') }}</textarea><br><br>
+            <label for="user_input">Enter a topic, question, or Reddit post URL:</label><br>
+            <textarea id="user_input" name="user_input" rows="3" cols="60"
+                      placeholder="e.g., 'Best vacation spots in the US' or a Reddit link">{{ user_input | default('') }}</textarea><br><br>
 
             <label for="model">Select a model:</label><br>
             <select id="model" name="model">
@@ -21,19 +23,30 @@
                 {% endfor %}
             </select><br><br>
 
-            <button type="submit">Submit</button>
+            <button type="submit">Analyze</button>
         </form>
 
         <p style="font-size: 0.9em; color: gray;">
             💡 Model currently in use: <strong>{{ model }}</strong>
         </p>
 
-        <h2>Output:</h2>
+        {% if threads %}
+            <h2>🧵 Reddit Threads Used:</h2>
+            <div class="reddit-threads">
+                {% for t in threads %}
+                    <div class="thread" style="margin-bottom: 1em;">
+                        <pre>{{ t }}</pre>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <h2>🔍 Model Response:</h2>
         <div class="output">
             {% if result %}
                 <div class="rendered-output">{{ result | safe }}</div>
             {% else %}
-                <p>No output yet. Submit a prompt!</p>
+                <p>No response yet. Submit a topic, post, or question.</p>
             {% endif %}
         </div>
     </div>

@@ -1,4 +1,6 @@
 import os
+import re
+from urllib.parse import urlparse
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -9,21 +11,15 @@ import markdown
 import bleach
 import logging
 
-# Setup logging
+# Setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Load environment variables
 load_dotenv()
 
-# Initialize FastAPI
 app = FastAPI()
-
-# Templates and static files
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Combined list of xAI and OpenAI models
 AVAILABLE_MODELS = [
     {"name": "grok-beta", "provider": "xai"},
     {"name": "grok-3-beta", "provider": "xai"},
@@ -33,7 +29,12 @@ AVAILABLE_MODELS = [
     {"name": "gpt-3.5-turbo", "provider": "openai"}
 ]
 
-# Markdown conversion and sanitization
+def get_provider_for_model(model_name: str) -> str:
+    for model in AVAILABLE_MODELS:
+        if model["name"] == model_name:
+            return model["provider"]
+    return "xai"
+
 def render_markdown_safe(md_text: str) -> str:
     html = markdown.markdown(
         md_text,
@@ -54,58 +55,81 @@ def render_markdown_safe(md_text: str) -> str:
         strip=False
     )
 
-# Provider lookup
-def get_provider_for_model(model_name: str) -> str:
-    for model in AVAILABLE_MODELS:
-        if model["name"] == model_name:
-            return model["provider"]
-    return "xai"  # Default to xAI
+async def fetch_reddit_content(query: str) -> (str, list):
+    posts_summary = []
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        parsed = urlparse(query)
+        if "reddit.com" in parsed.netloc and "comments" in parsed.path:
+            post_id_match = re.search(r"/comments/([a-z0-9]+)/", parsed.path)
+            if post_id_match:
+                post_id = post_id_match.group(1)
+                url = f"https://api.pushshift.io/reddit/submission/search/?ids={post_id}"
+                res = await client.get(url)
+                if res.status_code == 200:
+                    posts = res.json().get("data", [])
+                    if posts:
+                        post = posts[0]
+                        summary = f"**{post.get('title', '')}**\n{post.get('selftext', '')}"
+                        posts_summary.append(summary)
+                        return summary, posts_summary
+                return "", []
 
-# GET route
+        search_url = f"https://api.pushshift.io/reddit/search/submission"
+        params = {"q": query, "size": 5, "sort": "desc", "sort_type": "score"}
+        res = await client.get(search_url, params=params)
+        if res.status_code == 200:
+            posts = res.json().get("data", [])
+            if posts:
+                summary = "\n\n".join(
+                    f"**{p.get('title', '')}**\n{p.get('selftext', '')}" for p in posts
+                )
+                posts_summary = [f"**{p.get('title', '')}**\n{p.get('selftext', '')}" for p in posts]
+                return summary, posts_summary
+        return "", []
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "prompt": "",
+        "user_input": "",
         "result": "",
         "model": "grok-beta",
-        "available_models": AVAILABLE_MODELS
+        "available_models": AVAILABLE_MODELS,
+        "threads": []
     })
 
-# POST route
 @app.post("/", response_class=HTMLResponse)
 async def generate(request: Request):
     form = await request.form()
-    prompt = form.get("prompt", "").strip()
+    user_input = form.get("user_input", "").strip()
     selected_model = form.get("model", "grok-beta").strip()
     provider = get_provider_for_model(selected_model)
     output = ""
 
-    if not prompt:
-        output = "No prompt provided."
+    if not user_input:
+        output = "Please enter a topic, Reddit post URL, or a question."
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "prompt": prompt,
+            "user_input": user_input,
             "result": output,
             "model": selected_model,
-            "available_models": AVAILABLE_MODELS
+            "available_models": AVAILABLE_MODELS,
+            "threads": []
         })
 
-    # System prompt for consistent behavior
+    reddit_context, threads = await fetch_reddit_content(user_input)
+
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are an assistant that prioritizes truth above all. "
-                "Always provide direct, candid, and intellectually honest responses. "
-                "Avoid hedging. Clearly state when information is uncertain or not available. "
-                "Support your answers with reasoning and facts when possible."
-            )
+            "content": "You are a helpful assistant. If Reddit content is provided, use it to inform your answer. Otherwise, do your best based on the user input."
         },
-        {"role": "user", "content": prompt}
+        {
+            "role": "user",
+            "content": f"Reddit context:\n{reddit_context}\n\nUser's Input:\n{user_input}"
+        }
     ]
 
-    # Determine API and headers
     try:
         if provider == "xai":
             api_url = "https://api.x.ai/v1/chat/completions"
@@ -113,53 +137,37 @@ async def generate(request: Request):
                 "Authorization": f"Bearer {os.getenv('XAI_API_KEY')}",
                 "Content-Type": "application/json"
             }
-            payload = {
-                "model": selected_model,
-                "messages": messages,
-                "stream": False,
-                "temperature": 0.7
-            }
-
-        elif provider == "openai":
+        else:
             api_url = "https://api.openai.com/v1/chat/completions"
             headers = {
                 "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
                 "Content-Type": "application/json"
             }
-            payload = {
-                "model": selected_model,
-                "messages": messages,
-                "temperature": 0.7
-            }
 
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
+        payload = {
+            "model": selected_model,
+            "messages": messages,
+            "temperature": 0.7
+        }
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(api_url, json=payload, headers=headers)
 
-        logger.info(f"{provider.upper()} API status: {response.status_code}")
-
         if response.status_code == 200:
             raw = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-            if not raw:
-                output = "<p>No content returned. The model may have been unable to generate a reply.</p>"
-            else:
-                output = render_markdown_safe(raw)
+            output = render_markdown_safe(raw) if raw else "No content returned from the model."
         else:
             output = f"<p>Error {response.status_code}: {response.text}</p>"
 
-    except httpx.TimeoutException:
-        logger.error("Request timed out.")
-        output = "Error: API request timed out."
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         output = f"Unexpected error: {str(e)}"
 
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "prompt": prompt,
+        "user_input": user_input,
         "result": output,
         "model": selected_model,
-        "available_models": AVAILABLE_MODELS
+        "available_models": AVAILABLE_MODELS,
+        "threads": threads
     })
