@@ -76,7 +76,18 @@ async def generate(request: Request):
     }
     payload = {
         "model": "grok-beta",
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are an assistant that prioritizes truth above all. "
+                    "Always provide direct, candid, and intellectually honest responses. "
+                    "Avoid hedging. Clearly state when information is uncertain or not available. "
+                    "Support your answers with reasoning and facts when possible."
+                )
+            },
+            {"role": "user", "content": prompt}
+        ],
         "stream": False,
         "temperature": 0.7
     }
@@ -89,7 +100,15 @@ async def generate(request: Request):
 
         if response.status_code == 200:
             raw = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-            output = render_markdown_safe(raw)
+            if not raw:
+                output = (
+                    "<p>The model did not return a response. This may indicate uncertainty or "
+                    "inability to answer the question honestly.</p>"
+                )
+            else:
+                logger.debug(f"Prompt sent: {prompt}")
+                logger.debug(f"Raw model response: {raw}")
+                output = render_markdown_safe(raw)
         else:
             output = f"<p>Error {response.status_code}: {response.text}</p>"
 
