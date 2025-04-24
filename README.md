@@ -24,7 +24,7 @@
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/your-username/sourceiq.git
+    git clone https://github.com/your-username/carbonated.git
     cd sourceiq
     ```
 
