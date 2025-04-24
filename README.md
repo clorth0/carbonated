@@ -1,15 +1,16 @@
-# Carbonated - Reddit Insight Analyzer
+# Carbonated - SourceIQ
 
-A lightweight FastAPI web application that allows users to analyze Reddit discussions using large language models from xAI (Grok) or OpenAI (GPT-3.5 / GPT-4). Users can enter a topic, question, or Reddit URL. The app retrieves relevant Reddit content via the Pushshift API and generates contextual insights using the selected model.
+**SourceIQ** is a lightweight FastAPI web application that enables users to analyze online discussions using large language models from xAI (Grok) or OpenAI (GPT-3.5 / GPT-4). Given a topic, question, or Reddit URL, SourceIQ retrieves relevant Reddit content (via the Pushshift API) and DuckDuckGo search summaries, then generates contextualized insights using the selected AI model — with transparent source annotations.
 
 ## Features
 
-- Single input field for natural language queries or Reddit post URLs
-- Retrieves relevant Reddit threads based on user input
-- Uses xAI's Grok or OpenAI's GPT models for context-aware analysis
-- Displays the Reddit content used for transparency
-- Renders model responses as safe, sanitized HTML from markdown
-- Customizable model selection
+- Single input for natural language queries or Reddit URLs
+- Retrieves top Reddit threads and DuckDuckGo search context
+- Supports xAI’s Grok and OpenAI’s GPT-4, GPT-4 Turbo, and GPT-3.5
+- Clearly annotates which parts of the response are based on Reddit or DuckDuckGo
+- Displays retrieved source content for transparency
+- Renders model responses as safe, styled HTML with markdown support
+- Supports model selection via dropdown
 
 ## Requirements
 
@@ -22,27 +23,40 @@ A lightweight FastAPI web application that allows users to analyze Reddit discus
 
 1. Clone the repository:
 
-git clone https://github.com/your-username/reddit-insight-analyzer.git
-cd reddit-insight-analyzer
+    ```bash
+    git clone https://github.com/your-username/sourceiq.git
+    cd sourceiq
+    ```
 
-2. Create and Activate Environment
+2. Create and activate a virtual environment:
 
-python3 -m venv venv
-source venv/bin/activate
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 
-3. Install Dependencies
+3. Install dependencies:
 
-pip install -r requirements.txt
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-4. Create a .env file in the project root with the following contents:
+4. Create a `.env` file in the project root:
 
-XAI_API_KEY=your_xai_api_key
+    ```env
+    XAI_API_KEY=your_xai_api_key
+    OPENAI_API_KEY=your_openai_api_key
+    ```
 
-OPENAI_API_KEY=your_openai_api_key
+5. Run the application:
 
-5. Run the Application
+    ```bash
+    uvicorn app:app --reload
+    ```
 
-uvicorn main:app --reload
+6. Open your browser to:
 
-6. Open your browser to http://127.0.0.1:8000/
-
+    ```
+    http://127.0.0.1:8000/
+    ```
+---
