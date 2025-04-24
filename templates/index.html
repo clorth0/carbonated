@@ -27,11 +27,11 @@
         </form>
 
         <p style="font-size: 0.9em; color: gray;">
-            💡 Model currently in use: <strong>{{ model }}</strong>
+            Model currently in use: <strong>{{ model }}</strong>
         </p>
 
         {% if threads %}
-            <h2>🧵 Reddit Threads Used:</h2>
+            <h2>Reddit Threads Used</h2>
             <div class="reddit-threads">
                 {% for t in threads %}
                     <div class="thread" style="margin-bottom: 1em;">
@@ -41,7 +41,7 @@
             </div>
         {% endif %}
 
-        <h2>🔍 Model Response:</h2>
+        <h2>Model Response</h2>
         <div class="output">
             {% if result %}
                 <div class="rendered-output">{{ result | safe }}</div>
@@ -49,6 +49,12 @@
                 <p>No response yet. Submit a topic, post, or question.</p>
             {% endif %}
         </div>
+
+        <p style="font-size: 0.85em; color: gray; margin-top: 1em;">
+            <strong>Legend:</strong><br>
+            <sup data-tooltip="Content derived from Reddit posts">[Reddit]</sup> = Based on Reddit context<br>
+            <sup data-tooltip="Content derived from DuckDuckGo search">[DuckDuckGo]</sup> = Based on DuckDuckGo summary
+        </p>
     </div>
 </body>
 </html>

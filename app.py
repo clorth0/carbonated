@@ -35,7 +35,12 @@ def get_provider_for_model(model_name: str) -> str:
             return model["provider"]
     return "xai"
 
+def annotate_sources(text: str) -> str:
+    return text.replace("(Reddit)", "<sup data-tooltip='Content derived from Reddit posts'>[Reddit]</sup>")\
+               .replace("(DuckDuckGo)", "<sup data-tooltip='Content derived from DuckDuckGo search'>[DuckDuckGo]</sup>")
+
 def render_markdown_safe(md_text: str) -> str:
+    md_text = annotate_sources(md_text)
     html = markdown.markdown(
         md_text,
         extensions=["fenced_code", "codehilite", "tables", "nl2br", "sane_lists"]
@@ -44,12 +49,16 @@ def render_markdown_safe(md_text: str) -> str:
         html,
         tags=bleach.sanitizer.ALLOWED_TAGS.union([
             "p", "pre", "code", "span", "h1", "h2", "h3", "h4", "h5", "h6",
-            "img", "table", "thead", "tbody", "tr", "th", "td", "hr", "br"
+            "img", "table", "thead", "tbody", "tr", "th", "td", "hr", "br",
+            "sup", "blockquote", "details", "summary"
         ]),
         attributes={
             "*": ["class", "style"],
             "a": ["href", "title", "target", "rel"],
-            "img": ["src", "alt", "title", "width", "height"]
+            "img": ["src", "alt", "title", "width", "height"],
+            "sup": ["data-tooltip"],
+            "details": ["open"],
+            "summary": []
         },
         protocols=["http", "https", "mailto"],
         strip=False
@@ -74,7 +83,7 @@ async def fetch_reddit_content(query: str) -> (str, list):
                         return summary, posts_summary
                 return "", []
 
-        search_url = f"https://api.pushshift.io/reddit/search/submission"
+        search_url = "https://api.pushshift.io/reddit/search/submission"
         params = {"q": query, "size": 5, "sort": "desc", "sort_type": "score"}
         res = await client.get(search_url, params=params)
         if res.status_code == 200:
@@ -86,6 +95,19 @@ async def fetch_reddit_content(query: str) -> (str, list):
                 posts_summary = [f"**{p.get('title', '')}**\n{p.get('selftext', '')}" for p in posts]
                 return summary, posts_summary
         return "", []
+
+async def fetch_duckduckgo_context(query: str) -> str:
+    url = "https://api.duckduckgo.com/"
+    params = {"q": query, "format": "json", "no_redirect": 1, "no_html": 1}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            abstract = data.get("Abstract", "")
+            related_topics = data.get("RelatedTopics", [])
+            related_texts = "\n".join(t.get("Text", "") for t in related_topics if "Text" in t)
+            return abstract + "\n\n" + related_texts if abstract or related_texts else ""
+    return ""
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -118,15 +140,26 @@ async def generate(request: Request):
         })
 
     reddit_context, threads = await fetch_reddit_content(user_input)
+    duckduckgo_context = await fetch_duckduckgo_context(user_input)
+
+    combined_context = ""
+    if reddit_context:
+        combined_context += f"Reddit context:\n{reddit_context}\n\n"
+    if duckduckgo_context:
+        combined_context += f"DuckDuckGo summary:\n{duckduckgo_context}\n\n"
 
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful assistant. If Reddit content is provided, use it to inform your answer. Otherwise, do your best based on the user input."
+            "content": (
+                "You are a helpful assistant. Use the provided Reddit and DuckDuckGo content as sources "
+                "when relevant. When referencing something that comes from Reddit or DuckDuckGo, clearly annotate it "
+                "by adding (Reddit) or (DuckDuckGo) in parentheses. If no source is used, do not add anything."
+            )
         },
         {
             "role": "user",
-            "content": f"Reddit context:\n{reddit_context}\n\nUser's Input:\n{user_input}"
+            "content": combined_context + f"User input:\n{user_input}"
         }
     ]
 
