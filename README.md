@@ -1,6 +1,6 @@
 # Carbonated - SourceIQ
 
-**SourceIQ** is a lightweight FastAPI web application that enables users to analyze online discussions using large language models from xAI (Grok) or OpenAI (GPT-3.5 / GPT-4). Given a topic, question, or Reddit URL, SourceIQ retrieves relevant Reddit content (via the Pushshift API) and DuckDuckGo search summaries, then generates contextualized insights using the selected AI model — with transparent source annotations.
+**Carbonated - SourceIQ** is a lightweight FastAPI web application that enables users to analyze online discussions using large language models from xAI (Grok) or OpenAI (GPT-3.5 / GPT-4). Given a topic, question, or Reddit URL, SourceIQ retrieves relevant Reddit content (via the Pushshift API) and DuckDuckGo search summaries, then generates contextualized insights using the selected AI model — with transparent source annotations.
 
 ## Features
 
