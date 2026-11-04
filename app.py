@@ -1,4 +1,5 @@
 import os
+import html
 import re
 from urllib.parse import urlparse
 from fastapi import FastAPI, Request
@@ -190,7 +191,8 @@ async def generate(request: Request):
             raw = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
             output = render_markdown_safe(raw) if raw else "No content returned from the model."
         else:
-            output = f"<p>Error {response.status_code}: {response.text}</p>"
+            # Upstream body is HTML-escaped, so this is not raw user HTML.
+            output = f"<p>Error {response.status_code}: {html.escape(response.text)}</p>"  # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
 
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
