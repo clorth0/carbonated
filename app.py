@@ -112,7 +112,7 @@ async def fetch_duckduckgo_context(query: str) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {
+    return templates.TemplateResponse(request, "index.html", {
         "request": request,
         "user_input": "",
         "result": "",
@@ -131,7 +131,7 @@ async def generate(request: Request):
 
     if not user_input:
         output = "Please enter a topic, Reddit post URL, or a question."
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request, "index.html", {
             "request": request,
             "user_input": user_input,
             "result": output,
@@ -198,7 +198,7 @@ async def generate(request: Request):
         logger.error(f"Unexpected error: {str(e)}")
         output = f"Unexpected error: {str(e)}"
 
-    return templates.TemplateResponse("index.html", {
+    return templates.TemplateResponse(request, "index.html", {
         "request": request,
         "user_input": user_input,
         "result": output,
